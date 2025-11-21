@@ -1,0 +1,4 @@
+{
+  "name": "Nexus AI Gateway (Internal)",
+  "description": "A local-first AI gateway for routing LlamaIndex agents to internal Ollama and vLLM clusters."
+}
