@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sentinel AI Gateway</title>
+    
+    <!-- 
+      AIR-GAP DEPLOYMENT INSTRUCTIONS:
+      1. Download Tailwind CSS CLI or a standalone CSS file and reference it here.
+         e.g. <link href="./styles.css" rel="stylesheet">
+      2. The CDN link below is for preview only.
+    -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+      /* Custom scrollbar for dark theme */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0f172a; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #334155; 
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #475569; 
+      }
+    </style>
+
+    <!-- 
+      STRICTLY LOCAL DEPENDENCIES:
+      For an isolated environment, download the following packages and serve them locally:
+      - react.development.js (or production.min.js)
+      - react-dom.development.js
+      - lucide-react.js
+      - recharts.js
+      
+      Update the importmap below to point to your local paths, e.g.:
+      "react": "./lib/react.js"
+    -->
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+    "recharts": "https://aistudiocdn.com/recharts@^3.4.1"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-slate-950 text-slate-100 antialiased overflow-hidden">
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

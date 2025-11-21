@@ -1,0 +1,4 @@
+{
+  "name": "Sentinel AI Gateway",
+  "description": "A comprehensive control plane for an AI Gateway. Standardize access, orchestrate models (Ollama, vLLM), enforce security policies, and visualize observability metrics. Fully local architecture with no external cloud dependencies."
+}
