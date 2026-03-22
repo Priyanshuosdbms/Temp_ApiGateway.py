@@ -615,30 +615,43 @@ def emit_validation_report(registers: list[RegisterEntry]) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Entry point
+# Core run function — call this directly from your FastAPI worker or any
+# other Python code. No subprocess, no argparse, no CLI required.
+#
+# Parameters
+# ----------
+# pdf_path     : str or Path — path to the uploaded PDF
+# out_path     : str or Path — where to write registers.json
+# report_path  : str or Path — where to write validation_report.json
+# config_overrides : dict   — any DEFAULT_CONFIG keys to override
+#                             (maps directly to the API's ExtractionConfig)
+# debug        : bool       — True for verbose per-register logging
+#
+# Returns
+# -------
+# dict with keys:
+#   "output"   : the full registers dict (also written to out_path)
+#   "report"   : the validation report dict (also written to report_path)
+#   "clean"    : True if zero validation issues
 # ---------------------------------------------------------------------------
-def main():
-    parser = argparse.ArgumentParser(description="Extract Chapter 6 registers from DW_apb_i2c databook PDF")
-    parser.add_argument("pdf", help="Path to the PDF file")
-    parser.add_argument("--out", default="registers.json", help="Output JSON path")
-    parser.add_argument("--report", default="validation_report.json", help="Validation report path")
-    parser.add_argument("--config", help="Optional JSON config override file")
-    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
-    args = parser.parse_args()
+def run(
+    pdf_path: str | Path,
+    out_path: str | Path = "registers.json",
+    report_path: str | Path = "validation_report.json",
+    config_overrides: dict = None,
+    debug: bool = False,
+) -> dict:
 
     logging.basicConfig(
-        level=logging.DEBUG if args.debug else logging.INFO,
+        level=logging.DEBUG if debug else logging.INFO,
         format="%(levelname)s %(message)s",
     )
 
-    config = dict(DEFAULT_CONFIG)
-    if args.config:
-        with open(args.config) as f:
-            config.update(json.load(f))
+    config = {**DEFAULT_CONFIG, **(config_overrides or {})}
 
-    pdf_path = Path(args.pdf)
+    pdf_path = Path(pdf_path)
     if not pdf_path.exists():
-        sys.exit(f"PDF not found: {pdf_path}")
+        raise FileNotFoundError(f"PDF not found: {pdf_path}")
 
     logging.info(f"Opening: {pdf_path} ({pdf_path.stat().st_size // 1024} KB)")
 
@@ -649,26 +662,22 @@ def main():
         # --- Step 1: Parse TOC ---
         toc = parse_toc(pdf, config)
         if not toc:
-            sys.exit("ERROR: No registers found in TOC. Check toc_pages config.")
+            raise ValueError("No registers found in TOC. Check toc_pages in config_overrides.")
 
         # --- Step 2: Parse master memory map ---
         master_map = parse_memory_map(pdf, config)
 
         # --- Step 3: Build page ranges from TOC ---
-        # doc_page -> 0-indexed pdf page:  pidx = doc_page - 1
         ranges = []
         for i, (sec, name, doc_page) in enumerate(toc):
             start_pidx = doc_page - 1
             if i + 1 < len(toc):
                 next_doc_page = toc[i + 1][2]
                 next_name = toc[i + 1][1]
-                # End page = page before next register starts
                 end_pidx = next_doc_page - 2
             else:
-                # Last register: extend to chapter end or PDF end
                 end_pidx = min(config["chapter6_end_doc_page"] - 1, total_pages - 1)
                 next_name = None
-            # Safety: never go backwards
             end_pidx = max(end_pidx, start_pidx)
             ranges.append((name, start_pidx, end_pidx, next_name))
 
@@ -684,38 +693,76 @@ def main():
             )
             registers.append(reg)
 
-    # --- Step 5: Emit outputs ---
+    # --- Step 5: Build output dicts ---
     output = {
         "metadata": {
             "source": str(pdf_path.name),
             "total_registers": len(registers),
             "extraction_tool": "extract_registers.py",
+            "config_used": config,
         },
         "registers": [register_to_dict(r) for r in registers],
     }
 
-    out_path = Path(args.out)
+    report = emit_validation_report(registers)
+
+    # --- Step 6: Write files ---
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(output, f, indent=2, ensure_ascii=False)
     logging.info(f"Written: {out_path} ({out_path.stat().st_size // 1024} KB)")
 
-    report = emit_validation_report(registers)
-    report_path = Path(args.report)
+    report_path = Path(report_path)
+    report_path.parent.mkdir(parents=True, exist_ok=True)
     with open(report_path, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2)
 
-    # Summary
+    # --- Step 7: Log summary ---
     ok = report["ok"]
     total = report["total"]
     issues = len(report["issues"])
     logging.info(f"\nResult: {ok}/{total} registers clean, {issues} with issues")
     if issues:
-        logging.warning("Issues detected — see validation_report.json")
+        logging.warning("Issues detected — see validation_report")
         for issue in report["issues"]:
             logging.warning(f"  {issue['register']}: {issue['status']} — {'; '.join(issue['notes'])}")
 
-    sys.exit(0 if issues == 0 else 1)
+    return {
+        "output": output,
+        "report": report,
+        "clean": issues == 0,
+    }
 
 
+# ---------------------------------------------------------------------------
+# Run configuration — edit these values, then: python extract_registers.py
+# ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    main()
+
+    # ── Inputs ──────────────────────────────────────────────────────────────
+    PDF_PATH    = "SYIdEouasSjJWbmv.pdf"   # path to your spec PDF
+    OUT_PATH    = "registers.json"          # where to write the extracted data
+    REPORT_PATH = "validation_report.json"  # where to write the validation report
+    DEBUG       = True                      # True = verbose per-register logging
+
+    # ── Page overrides (leave empty dict {} to use DEFAULT_CONFIG) ──────────
+    # Only specify keys that differ from DEFAULT_CONFIG.
+    # These are the same keys accepted by the FastAPI ExtractionConfig model.
+    CONFIG_OVERRIDES = {
+        # "toc_pages":                [2, 3, 4, 5, 6, 7],
+        # "chapter6_start_doc_page":  153,
+        # "chapter6_end_doc_page":    350,
+        # "memory_map_doc_page":      153,
+        # "memory_map_end_doc_page":  160,
+    }
+
+    # ── Execute ─────────────────────────────────────────────────────────────
+    result = run(
+        pdf_path=PDF_PATH,
+        out_path=OUT_PATH,
+        report_path=REPORT_PATH,
+        config_overrides=CONFIG_OVERRIDES,
+        debug=DEBUG,
+    )
+    sys.exit(0 if result["clean"] else 1)
