@@ -34,5 +34,19 @@ controller already attached to a sibling namespace is notified of the change. Tr
 
 "Which status code does the Format NVM command return when a namespace's format operation is already in progress?"
 
+
+
+"Given: OACS bit 10 = '1'; the controller is an Administrative controller (Lockdown is Optional and implemented per its Admin Command Support table); the Command and Feature Lockdown log page (Scope=0h) lists admin opcode 11h (Firmware Image Download) as supported-to-be-prohibited but NOT currently prohibited on any interface. A host then issues a Lockdown command with SCP=0h, OFI=11h, PRHBT=1, IFC=00b (Admin Submission Queue only). State, in one line only, the exact completion status this command receives."
+
+"Given: vendor-specific Set Features Feature Identifier F5h is defined by UUID List index 3, the Commands Supported and Effects data structure marks UUID Selection Supported for both Lockdown and Set Features; the Command and Feature Lockdown log page, queried with Scope 2h and UUID Index=3, lists F5h as supported-to-be-prohibited but not currently prohibited on either interface; the controller is an I/O controller (Lockdown Optional, implemented) with OACS bit 10='1'; the NVM subsystem DOES contain a Management Endpoint. A host issues Lockdown with SCP=2h, OFI=F5h, CDW14 UUID Index=3, PRHBT=1, IFC-01b (Admin SQ and out-of-band Management Endpoint). State, in one line only, the exact completion status of this command."
+
+"Given: OACS bit 3 = '1'; the controller is an Administrative controller (Namespace Management is Optional and implemented per its Admin Command Support table); the target NVM Set exists within the target Endurance Group; sufficient unallocated NVM capacity is confirmed via the Identify Namespace data structure; CSI=0h (NVM Command Set) is requested; NSID is correctly cleared to Oh for the Create operation. State, in one line only, the exact outcome reported in the completion queue entry.
+
+"Given: OACS bit 3 = '1' on an Administrative controller (Namespace Management Optional, implemented, per its Admin Command Support table and capability description); a Create operation specifies CSI=0h, a valid NVM Set within a valid Endurance Group, sufficient unallocated capacity confirmed via Identify Namespace, and the ANA Group Identifier field left cleared to 0h; a different controller in the same NVM subsystem is already attached to a sibling namespace in that Endurance Group with Namespace Attribute Notices enabled; this subsystem's Discovery controller separately marks Namespace Management as Prohibited in its own Admin Command Support table. State, in one line only, the exact completion status the Create operation itself receives on the Administrative controller."
+
+)
+
+3
+
 )
 
